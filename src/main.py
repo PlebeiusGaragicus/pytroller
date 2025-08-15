@@ -1,9 +1,11 @@
 import sys
 import time
+import math
 from collections import deque
 from typing import Dict, Set, Tuple
 
 import pygame
+from .game import Game
 
 
 WIDTH, HEIGHT = 800, 600
@@ -273,11 +275,13 @@ def main():
             axis_by_iid[iid] = {}
 
     ui = VisualUI()
+    game = Game(WIDTH, HEIGHT, log)
 
     last_auto_rescan = 0.0
 
     running = True
     while running:
+        dt = clock.tick(60) / 1000.0
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -331,10 +335,47 @@ def main():
             last_auto_rescan = time.time()
             jm.rescan()
 
+        # Inputs from joystick/keyboard
+        active_iid = next(iter(sorted(jm.joysticks.keys())), None)
+        pressed = pressed_by_iid.get(active_iid, set()) if active_iid is not None else set()
+        axes = axis_by_iid.get(active_iid, {}) if active_iid is not None else {}
+        ax = float(axes.get(AXIS_X, 0.0))
+        ay = float(axes.get(AXIS_Y, 0.0))
+        # Convert to screen dx,dy (right/down positive)
+        mx = -ax if AXIS_LEFT_POSITIVE else ax
+        my = -ay if AXIS_UP_POSITIVE else ay
+        # Deadzone and normalize
+        if abs(mx) < 0.20:
+            mx = 0.0
+        if abs(my) < 0.20:
+            my = 0.0
+        L = math.hypot(mx, my)
+        if L > 1.0:
+            mx /= L
+            my /= L
+
+        keys = pygame.key.get_pressed()
+        kx = (1 if keys[pygame.K_RIGHT] else 0) - (1 if keys[pygame.K_LEFT] else 0)
+        ky = (1 if keys[pygame.K_DOWN] else 0) - (1 if keys[pygame.K_UP] else 0)
+        if kx != 0 or ky != 0:
+            mx, my = float(kx), float(ky)
+            L = math.hypot(mx, my)
+            if L > 0:
+                mx /= L
+                my /= L
+
+        shoot = (BUTTON_MAP["action_up"] in pressed) or keys[pygame.K_SPACE]
+        boost = (BUTTON_MAP["action_left"] in pressed) or keys[pygame.K_LSHIFT] or keys[pygame.K_RSHIFT]
+        shield = (BUTTON_MAP["action_right"] in pressed) or keys[pygame.K_LCTRL] or keys[pygame.K_RCTRL]
+
+        # Update game world
+        game.update(dt, mx, my, shoot, boost, shield)
+
         # Render
         screen.fill(BG_COLOR)
+        game.draw(screen, font)
 
-        # Header (minimal text, visuals show input state)
+        # Header overlay
         y = 8
         def blit_text(text, color=FG_COLOR):
             nonlocal y
@@ -343,20 +384,11 @@ def main():
             y += surf.get_height() + LINE_SPACING
 
         blit_text(TITLE, ACCENT)
-        blit_text("Keys: ESC quit | R rescan | C clear log")
+        blit_text("Keys: ESC quit | R rescan | C clear log | Arrows move | Space shoot | Shift boost | Ctrl shield")
         for line in jm.summary_lines():
             blit_text(line)
 
-        # Active joystick state
-        active_iid = next(iter(sorted(jm.joysticks.keys())), None)
-        pressed = pressed_by_iid.get(active_iid, set()) if active_iid is not None else set()
-        axes = axis_by_iid.get(active_iid, {}) if active_iid is not None else {}
-
-        # Draw visual controller state
-        ui.draw(screen, font, pressed, axes)
-
         pygame.display.flip()
-        clock.tick(60)
 
     pygame.quit()
     return 0

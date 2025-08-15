@@ -1,13 +1,13 @@
 # pytroller
-Minimal Pygame-based USB arcade controller debug app.
+Minimal Pygame-based USB arcade controller debug app with a built-in mini space shooter demo.
 
 ## Features
 - Detects hot-plug joysticks (USB gamepads/arcade sticks).
 - Logs buttons, axes, and hat/D-pad events to the console.
-- Windowed mode shows a visual controller UI:
-  - 4-way stick directions light up.
-  - Face buttons and triggers change color when pressed.
-  - Start/Menu highlight when pressed.
+- Built-in demo game (space shooter):
+  - Player triangle, scrolling starfield, enemies (asteroids, green blobs, red shooters, purple snakes).
+  - Yellow (Up) shoots. Green (Left) boosts speed (uses energy). Blue (Right) shields (uses energy).
+  - Enemies drop energy shards to recharge.
 - Keys: ESC quit, R rescan devices, C clear log (console continues to show live logs).
 
 ## Setup
@@ -24,13 +24,13 @@ pip install -r requirements.txt
 python -m src.main
 ```
 
-A window titled "Pytroller: USB Arcade Controller Debug" will open.
+A window titled "Pytroller: USB Arcade Controller Debug" will open with the demo game.
 
 ## Usage notes
 - Plug in your controller before starting, or press R to rescan after plugging in.
 - The header shows connected devices, with axes/hats/buttons counts.
-- 4-way sticks may report as a single hat (D-pad) or as X/Y axes, depending on the controller/driver. Current visuals follow the captured mapping.
-- Debug lines continue printing to the terminal; the window now focuses on live visuals.
+- 4-way sticks may report as a single hat (D-pad) or as X/Y axes, depending on the controller/driver. Current mapping follows the captured logs.
+- Debug lines continue printing to the terminal; the window shows the live game.
 
 ### Mapping (from BUTTONS.md capture)
 - Start: button 9
@@ -43,6 +43,12 @@ A window titled "Pytroller: USB Arcade Controller Debug" will open.
 If your device differs, adjust these constants in `src/main.py`:
 - `BUTTON_MAP` for button indices
 - `AXIS_X`, `AXIS_Y`, `AXIS_LEFT_POSITIVE`, `AXIS_UP_POSITIVE`, and `AXIS_THRESH`
+
+### Demo controls (keyboard fallback)
+- Move: Arrow keys
+- Shoot: Space (maps to Yellow/Up face button)
+- Boost: Shift (maps to Green/Left face button)
+- Shield: Ctrl (maps to Blue/Right face button)
 
 ## Troubleshooting (macOS)
 - If no devices are detected, try unplugging/replugging then press R.
